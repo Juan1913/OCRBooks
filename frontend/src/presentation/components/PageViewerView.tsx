@@ -24,14 +24,36 @@ function resolveImageSrc(src: string | undefined): string {
   return src
 }
 
-/** Extract text length recursively for short-paragraph centering heuristic. */
-function textLen(node: ReactNode): number {
-  if (typeof node === 'string') return node.length
-  if (typeof node === 'number') return String(node).length
-  if (Array.isArray(node)) return node.reduce((s, c) => s + textLen(c), 0)
+/** Recursively collect all plain text from a ReactNode. */
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string') return node
+  if (typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(extractText).join('')
   if (node && typeof node === 'object' && 'props' in node)
-    return textLen((node as { props: { children?: ReactNode } }).props.children)
-  return 0
+    return extractText((node as { props: { children?: ReactNode } }).props.children)
+  return ''
+}
+
+/**
+ * Return true only for paragraphs that look like title/portada text:
+ *   - Short (< 60 chars)
+ *   - Does NOT end with ':'  (intro lines like "Resolver las inecuaciones:")
+ *   - Does NOT start with ';' (continuation of a multi-item series)
+ *   - Does NOT look like a sub-problem label: "a)", "b)", "1.", "2.", etc.
+ *   - Does NOT start with a digit followed by '.' (numbered problems)
+ * This keeps title-page text (edition, publisher, short title fragments) centered
+ * while leaving body content (problems, intro phrases, labels) left-aligned.
+ */
+function shouldCenter(node: ReactNode): boolean {
+  const text = extractText(node).trim()
+  if (!text || text.length === 0 || text.length > 60) return false
+  if (text.endsWith(':'))                   return false  // intro line
+  if (text.startsWith(';'))                 return false  // continuation
+  if (/^[a-zA-Z]\)\s*$/.test(text))        return false  // lone label: a) b) c)
+  if (/^[a-zA-Z]\)\s+\S/.test(text))       return false  // label + content: a) |x-1|
+  if (/^\d+[.*]\s/.test(text))             return false  // numbered problem: 1. 2.
+  if (/^\d+\*\*/.test(text))              return false  // starred problem: 1**
+  return true
 }
 
 const mdComponents: Components = {
@@ -57,16 +79,12 @@ const mdComponents: Components = {
     </h4>
   ),
 
-  /* Paragraphs — center when short (title pages, captions, labels) */
-  p: ({ children }) => {
-    const len = textLen(children)
-    const center = len > 0 && len < 80
-    return (
-      <p className={`mb-[0.9em] leading-[1.9] hyphens-auto ${center ? 'text-center' : 'text-justify'}`}>
-        {children}
-      </p>
-    )
-  },
+  /* Paragraphs — center only for portada/title-like text; body always justified */
+  p: ({ children }) => (
+    <p className={`mb-[0.9em] leading-[1.9] hyphens-auto ${shouldCenter(children) ? 'text-center' : 'text-justify'}`}>
+      {children}
+    </p>
+  ),
 
   ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
 
