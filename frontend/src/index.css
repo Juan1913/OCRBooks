@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply text-gray-900 antialiased; }
+}
+
+.prose { font-family: 'Georgia', serif; line-height: 1.8; }
+.prose p { margin-bottom: 0.75rem; }

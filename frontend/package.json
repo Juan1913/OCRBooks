@@ -1,0 +1,38 @@
+{
+  "name": "ocrbooks-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@codemirror/lang-markdown": "^6.2.5",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@tailwindcss/typography": "^0.5.20",
+    "@tanstack/react-query": "^5.51.0",
+    "@uiw/react-codemirror": "^4.23.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.417.0",
+    "pdfjs-dist": "^4.4.168",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-pdf": "^9.1.0",
+    "react-router-dom": "^6.26.0",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.4"
+  }
+}
