@@ -18,9 +18,10 @@ export const bookApi = {
   get: (id: string): Promise<BookDetail> =>
     request(`/api/books/${id}`),
 
-  upload: (file: File): Promise<{ id: string; title: string; status: string }> => {
+  upload: (file: File, aiMode?: string | null): Promise<{ id: string; title: string; status: string }> => {
     const fd = new FormData()
     fd.append('file', file)
+    if (aiMode) fd.append('ai_mode', aiMode)
     return request('/api/books', { method: 'POST', body: fd })
   },
 

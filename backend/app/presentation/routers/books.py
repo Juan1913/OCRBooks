@@ -1,6 +1,7 @@
 import shutil
 from dataclasses import asdict
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from typing import Optional
 from fastapi.responses import FileResponse
 
 from app.application.commands import CompileBookCommand
@@ -25,11 +26,16 @@ router = APIRouter()
 @router.post("", status_code=201)
 async def upload_book(
     file: UploadFile = File(...),
+    ai_mode: Optional[str] = Form(None),  # null | "text" | "vision"
     uc: UploadBookUseCase = Depends(upload_book_uc),
 ):
     try:
         data = await file.read()
-        dto = await uc.execute(UploadBookCommand(filename=file.filename or "book.pdf", file_data=data))
+        dto = await uc.execute(UploadBookCommand(
+            filename=file.filename or "book.pdf",
+            file_data=data,
+            ai_mode=ai_mode if ai_mode in ("text", "vision") else None,
+        ))
         return asdict(dto)
     except InvalidFileType as e:
         raise HTTPException(400, str(e))

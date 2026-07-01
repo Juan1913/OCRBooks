@@ -35,6 +35,60 @@ function extractText(node: ReactNode): string {
 }
 
 /**
+ * Pre-process markdown from Marker OCR to fix common layout artifacts:
+ *
+ * 1. Join orphaned exercise numbers with their display-math formula.
+ *    Marker reads multi-column exercise lists sequentially and outputs:
+ *      "118*.\n$$y = \arcsin x$$"  →  two separate elements
+ *    We join them as inline math:
+ *      "118*. $y = \arcsin x$"    →  one compact line
+ *
+ * 2. Strip leading ". " artifacts (e.g. ". y = sin x ." → "y = sin x .")
+ *    that appear when the OCR splits a problem number from the period that
+ *    precedes the formula.
+ */
+function preprocessMarkdown(raw: string): string {
+  const lines = raw.split('\n')
+  const out: string[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    // Detect a lone exercise number: "118*.", "80*.", "122.", "83*." etc.
+    if (/^\d+[\\*]*\*?[.\\]\s*$/.test(trimmed)) {
+      // Skip blank lines, then check if next content line is $$formula$$
+      let j = i + 1
+      while (j < lines.length && lines[j].trim() === '') j++
+
+      if (j < lines.length) {
+        const next = lines[j].trim()
+        // Single-line display math: $$...$$
+        if (next.startsWith('$$') && next.endsWith('$$') && next.length > 4) {
+          const formula = next.slice(2, -2).trim()
+          out.push(`${trimmed} $${formula}$`)
+          i = j + 1
+          continue
+        }
+      }
+    }
+
+    // Strip leading ". " artifact on short lines
+    if (/^\.\s+/.test(trimmed) && trimmed.length < 120) {
+      out.push(line.replace(/^\s*\.\s+/, ''))
+      i++
+      continue
+    }
+
+    out.push(line)
+    i++
+  }
+
+  return out.join('\n')
+}
+
+/**
  * Return true only for paragraphs that look like title/portada text:
  *   - Short (< 60 chars)
  *   - Does NOT end with ':'  (intro lines like "Resolver las inecuaciones:")
@@ -81,7 +135,7 @@ const mdComponents: Components = {
 
   /* Paragraphs — center only for portada/title-like text; body always justified */
   p: ({ children }) => (
-    <p className={`mb-[0.9em] leading-[1.9] hyphens-auto ${shouldCenter(children) ? 'text-center' : 'text-justify'}`}>
+    <p className={`mb-[0.5em] leading-[1.75] hyphens-auto ${shouldCenter(children) ? 'text-center' : 'text-justify'}`}>
       {children}
     </p>
   ),
@@ -260,7 +314,7 @@ export function PageViewerView({ page, pageWidthMm, pageHeightMm }: Props) {
                   rehypePlugins={[rehypeRaw]}
                   components={mdComponents}
                 >
-                  {page.content}
+                  {preprocessMarkdown(page.content)}
                 </ReactMarkdown>
               </div>
             </div>

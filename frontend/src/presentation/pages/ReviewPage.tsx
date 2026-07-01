@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, ChevronRight, Edit2, X, FileDown, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Edit2, X, FileDown, RefreshCw, Zap } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useReviewPage } from '../../application/useReviewPage'
 import { useCompileBook } from '../../application/useCompileBook'
 import { PageViewerView } from '../components/PageViewerView'
 import { LaTeXEditorView } from '../components/LaTeXEditorView'
 import { bookApi } from '../../infrastructure/api/bookApi'
+import { aiApi } from '../../infrastructure/api/aiApi'
 import clsx from 'clsx'
 
 const DOT: Record<string, string> = {
@@ -24,8 +26,27 @@ export function ReviewPage() {
   const [editorContent, setEditorContent] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [aiFixing, setAiFixing] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+
+  const queryClient = useQueryClient()
+  const { data: aiStatus } = useQuery({ queryKey: ['ai-status'], queryFn: aiApi.status, staleTime: 30_000 })
 
   const { saveLatex } = useReviewPage(bookId, pageNumber)
+
+  const handleAiFix = async () => {
+    if (!bookId) return
+    setAiFixing(true)
+    setAiError(null)
+    try {
+      await aiApi.fixPage(bookId, pageNumber)
+      await queryClient.invalidateQueries({ queryKey: ['page', bookId, pageNumber] })
+    } catch (e: unknown) {
+      setAiError(e instanceof Error ? e.message : 'Error de IA')
+    } finally {
+      setAiFixing(false)
+    }
+  }
 
   const total = book?.total_pages ?? 1
   const goTo = (n: number) => { if (n >= 1 && n <= total) { setEditOpen(false); navigate(`/review/${bookId}/${n}`) } }
@@ -67,6 +88,13 @@ export function ReviewPage() {
           </span>
 
           <div className="ml-auto flex items-center gap-2">
+            {aiStatus?.configured && page?.status === 'ocr_done' && (
+              <button onClick={handleAiFix} disabled={aiFixing}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors disabled:opacity-50">
+                {aiFixing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                {aiFixing ? 'Mejorando…' : 'Mejorar con IA'}
+              </button>
+            )}
             <button onClick={editOpen ? () => setEditOpen(false) : openEditor}
               className={clsx('flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors', editOpen ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-700 border-gray-300 hover:border-brand')}>
               {editOpen ? <><X className="w-4 h-4" /> Cerrar</> : <><Edit2 className="w-4 h-4" /> Editar LaTeX</>}
@@ -106,6 +134,13 @@ export function ReviewPage() {
           </button>
         </div>
       </header>
+
+      {aiError && (
+        <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between flex-shrink-0">
+          <span>{aiError}</span>
+          <button onClick={() => setAiError(null)} className="ml-3 text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden p-4">
         {editOpen && page?.content ? (

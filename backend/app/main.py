@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.infrastructure.persistence.database import init_db
 from app.config import STORAGE_PATH
-from app.presentation.routers import books, pages, ws
+from app.presentation.routers import books, pages, ws, ai
 
 
 @asynccontextmanager
@@ -25,6 +25,7 @@ app.add_middleware(
 
 app.include_router(books.router, prefix="/api/books", tags=["books"])
 app.include_router(pages.router, prefix="/api/books", tags=["pages"])
+app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
 app.include_router(ws.router, tags=["websocket"])
 app.mount("/storage", StaticFiles(directory=str(STORAGE_PATH)), name="storage")
 

@@ -25,6 +25,8 @@ class OrmBook(Base):
     # Infrastructure-only fields — not part of the domain entity
     storage_path: Mapped[str | None]     = mapped_column(String, nullable=True)
     celery_task_id: Mapped[str | None]   = mapped_column(String, nullable=True)
+    # null = no AI, "text" = AI text-only, "vision" = AI with original image
+    ai_mode: Mapped[str | None]          = mapped_column(String, nullable=True)
 
     pages: Mapped[list["OrmPage"]] = relationship(
         "OrmPage", back_populates="book", cascade="all, delete"

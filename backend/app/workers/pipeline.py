@@ -15,6 +15,8 @@ from app.infrastructure.latex.markdown_to_latex import assemble_document
 from app.infrastructure.latex.tectonic_compiler import TectonicCompiler
 from app.infrastructure.messaging.redis_publisher import RedisProgressPublisher
 from app.infrastructure.persistence import sync_repos as db
+from app.infrastructure.ai import config_store as ai_config_store
+from app.infrastructure.ai.provider import AIProvider
 from app.config import STORAGE_PATH
 
 
@@ -71,6 +73,9 @@ def _phase_ocr(book_id: str, fs: LocalFileStorage, pub) -> bool:
     total = len(image_paths)
     ocr = MarkerOcrService(get_marker_models())
 
+    ai_mode = db.get_book_ai_mode(book_id)
+    ai_provider = AIProvider(ai_config_store.load()) if ai_mode else None
+
     for idx, img_path in enumerate(image_paths):
         page_num = idx + 1
 
@@ -90,6 +95,15 @@ def _phase_ocr(book_id: str, fs: LocalFileStorage, pub) -> bool:
         try:
             result = ocr.ocr_page(str(img_path), page_num, fs.figures_dir(book_id))
             markdown = _make_storage_urls(result.markdown, STORAGE_PATH)
+
+            # Optional AI cleanup after OCR
+            if ai_provider and ai_provider.is_configured:
+                img_for_ai = img_path if ai_mode == "vision" else None
+                try:
+                    markdown = ai_provider.fix_page_sync(img_for_ai, markdown)
+                except Exception:
+                    pass  # AI failure is non-fatal; keep raw OCR output
+
             fs.write_page_ocr_content(book_id, page_num, markdown)
             db.set_page_done(book_id, page_num, str(fs.md_path(book_id, page_num)), result.has_figures)
             db.advance_book_progress(book_id, page_num)

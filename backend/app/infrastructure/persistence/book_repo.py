@@ -21,8 +21,9 @@ class SqlAlchemyBookRepository:
         )
         return [BookOrmMapper.to_domain(r) for r in rows.scalars()]
 
-    async def save(self, book: Book) -> Book:
+    async def save(self, book: Book, ai_mode: str | None = None) -> Book:
         orm = BookOrmMapper.to_orm(book)
+        orm.ai_mode = ai_mode
         self._session.add(orm)
         await self._session.commit()
         await self._session.refresh(orm)

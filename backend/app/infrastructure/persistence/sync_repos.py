@@ -150,6 +150,14 @@ def count_book_pages(book_id: str) -> int:
         ).scalar_one()
 
 
+def get_book_ai_mode(book_id: str) -> Optional[str]:
+    """Return the ai_mode for this book: None, 'text', or 'vision'."""
+    with _session() as s:
+        return s.execute(
+            select(OrmBook.ai_mode).where(OrmBook.id == book_id)
+        ).scalar_one_or_none()
+
+
 def delete_book(book_id: str) -> None:
     """Delete book and all pages (cascade). Storage deletion is the caller's responsibility."""
     with _session() as s:

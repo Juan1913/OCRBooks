@@ -1,9 +1,12 @@
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpen, CheckCircle2, AlertCircle, Loader2, Clock, TrendingUp } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { BookUploadView } from '../components/BookUploadView'
+import { UploadAIModeModal } from '../components/UploadAIModeModal'
 import { useUploadBook } from '../../application/useUploadBook'
 import { useBooks } from '../../application/useBooks'
+import { aiApi } from '../../infrastructure/api/aiApi'
 import type { BookStatus } from '../../domain/types'
 import clsx from 'clsx'
 
@@ -33,15 +36,24 @@ const STATUS_LABEL: Record<BookStatus, string> = {
 }
 
 export function HomePage() {
-  const { uploading, error, upload } = useUploadBook()
+  const { uploading, error, pendingFile, selectFile, upload, cancelPending } = useUploadBook()
   const { data: books, isLoading } = useBooks()
   const [dragging, setDragging] = useState(false)
+  const { data: aiStatus } = useQuery({ queryKey: ['ai-status'], queryFn: aiApi.status, staleTime: 30_000 })
+
+  const handleFile = useCallback((file: File) => {
+    if (aiStatus?.configured) {
+      selectFile(file)   // show AI mode modal first
+    } else {
+      upload(file, null) // no AI configured → upload directly
+    }
+  }, [aiStatus, selectFile, upload])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)
     const file = e.dataTransfer.files[0]
-    if (file) upload(file)
-  }, [upload])
+    if (file) handleFile(file)
+  }, [handleFile])
 
   const total      = books?.length ?? 0
   const processing = books?.filter(b => ['extracting','processing','compiling'].includes(b.status)).length ?? 0
@@ -79,7 +91,7 @@ export function HomePage() {
             onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
-            onFileSelect={upload}
+            onFileSelect={handleFile}
           />
         </section>
 
@@ -160,6 +172,15 @@ export function HomePage() {
           </div>
         </section>
       </div>
+
+      {pendingFile && aiStatus && (
+        <UploadAIModeModal
+          file={pendingFile}
+          provider={aiStatus.provider}
+          onConfirm={(mode) => upload(pendingFile, mode)}
+          onCancel={cancelPending}
+        />
+      )}
     </div>
   )
 }

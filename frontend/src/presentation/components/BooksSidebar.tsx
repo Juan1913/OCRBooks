@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   BookOpen, Pause, Play, Trash2, Eye, UploadCloud,
-  CheckCircle2, AlertCircle, Loader2, Clock, ChevronRight,
+  CheckCircle2, AlertCircle, Loader2, Clock, ChevronRight, Settings,
 } from 'lucide-react'
 import { bookApi } from '../../infrastructure/api/bookApi'
 import { ConfirmModal } from './ConfirmModal'
+import { AISettingsModal } from './AISettingsModal'
 import type { BookSummary, BookStatus } from '../../domain/types'
 import clsx from 'clsx'
 
@@ -172,6 +173,7 @@ export function BooksSidebar() {
   const queryClient = useQueryClient()
 
   const [confirm, setConfirm] = useState<DeleteConfirm>({ open: false, bookId: '', title: '' })
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false)
 
   const { data: books = [] } = useQuery({
     queryKey: ['books'],
@@ -207,13 +209,18 @@ export function BooksSidebar() {
       <aside className="w-64 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col h-full shadow-sm">
 
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-gray-100">
+        <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm group-hover:bg-indigo-700 transition-colors">
               <BookOpen className="w-4.5 h-4.5 text-white" />
             </div>
             <span className="font-bold text-gray-900 text-sm tracking-tight">OCRBooks</span>
           </Link>
+          <button onClick={() => setAiSettingsOpen(true)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            title="Configurar IA">
+            <Settings className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Stats chips */}
@@ -279,6 +286,7 @@ export function BooksSidebar() {
         onConfirm={() => remove.mutate(confirm.bookId)}
         onCancel={() => setConfirm({ open: false, bookId: '', title: '' })}
       />
+      {aiSettingsOpen && <AISettingsModal onClose={() => setAiSettingsOpen(false)} />}
     </>
   )
 }

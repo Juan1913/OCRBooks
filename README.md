@@ -47,9 +47,9 @@ Desde esta pantalla se puede:
 
 ## Instalación y arranque
 
-### Opción 1 — Docker (recomendado)
+### Docker (recomendado)
 
-Requiere: Docker, Docker Compose, ~8 GB de RAM libre.
+Requiere únicamente Docker y Docker Compose. No hace falta instalar Python, Node, ni ningún compilador LaTeX.
 
 ```bash
 git clone <repo>
@@ -59,54 +59,47 @@ docker-compose up --build
 
 Abre http://localhost:3000
 
-### Opción 2 — Desarrollo local
+La imagen ya incluye Tectonic, PyTorch CPU-only y todos los modelos de Marker. La primera vez tarda unos minutos en construirse y en descargar los pesos del modelo OCR (~2–3 GB).
 
-Requiere: Python 3.11+, Node.js 18+, Redis corriendo.
+### Desarrollo local (hot-reload)
+
+Requiere: Python 3.11+, Node.js 18+, Redis.
 
 **1. Redis**
 ```bash
 redis-server --daemonize yes
 ```
 
-**2. Backend**
+**2. Backend + dependencias Python**
 ```bash
 cd backend
-
-# PyTorch CPU-only (evita descargar la versión con CUDA)
 pip install torch --index-url https://download.pytorch.org/whl/cpu
-
 pip install -r requirements.txt
-
-# Tectonic — compilador LaTeX ligero (descarga paquetes automáticamente)
-# Linux:
-curl -fsSL https://drop.cargopkg.io/tectonic -o ~/.local/bin/tectonic && chmod +x ~/.local/bin/tectonic
-# macOS: brew install tectonic
-
 cp ../.env.example .env
 ```
 
 **3. Frontend**
 ```bash
-cd frontend
-npm install
+cd frontend && npm install
 ```
 
-**4. Arrancar todo de una vez**
+**4. Arrancar todo**
 ```bash
-# Desde la raíz del proyecto
 ./dev.sh
 ```
 
-O manualmente en tres terminales:
+`dev.sh` descarga automáticamente el binario de Tectonic para tu OS (Linux x86\_64, macOS Intel, macOS Apple Silicon) la primera vez que se ejecuta. No requiere sudo ni gestores de paquetes.
+
+O en tres terminales separadas:
 ```bash
-# Terminal 1 — API
+# API
 cd backend && PYTHONPATH=. uvicorn app.main:app --reload --port 8000
 
-# Terminal 2 — Worker Celery
+# Worker Celery
 cd backend && PYTHONPATH=. TORCH_DEVICE=cpu \
   celery -A app.workers.celery_app.celery_app worker --loglevel=info --concurrency=1
 
-# Terminal 3 — Frontend
+# Frontend
 cd frontend && npm run dev
 ```
 

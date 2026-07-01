@@ -9,6 +9,7 @@ from dataclasses import dataclass
 class UploadBookCommand:
     filename: str
     file_data: bytes
+    ai_mode: str | None = None  # None | "text" | "vision"
 
 
 @dataclass(frozen=True)

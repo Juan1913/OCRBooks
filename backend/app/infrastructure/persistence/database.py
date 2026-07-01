@@ -17,5 +17,11 @@ async def get_db():
 
 async def init_db():
     from app.infrastructure.persistence import orm_models  # noqa: ensure models are registered
+    from sqlalchemy import text
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Add ai_mode column to existing DBs that predate this field
+        try:
+            await conn.execute(text("ALTER TABLE books ADD COLUMN ai_mode VARCHAR"))
+        except Exception:
+            pass  # column already exists

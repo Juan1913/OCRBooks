@@ -34,7 +34,7 @@ class UploadBookUseCase:
             title=Path(cmd.filename).stem,
             original_filename=cmd.filename,
         )
-        book = await self._books.save(book)
+        book = await self._books.save(book, ai_mode=cmd.ai_mode)
 
         pdf_path = self._storage.get_pdf_path(book_id)
         self._dispatcher.dispatch_process_book(book_id, str(pdf_path))

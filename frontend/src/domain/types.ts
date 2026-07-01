@@ -41,6 +41,20 @@ export interface PageDetail {
   error_message: string | null
 }
 
+export interface AIConfig {
+  provider: string
+  base_url: string
+  model: string
+  api_key: string
+  vision: boolean
+}
+
+export interface AIStatus {
+  configured: boolean
+  provider: string
+  model: string
+}
+
 export interface ProgressMessage {
   phase: ProgressPhase
   page?: number
